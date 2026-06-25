@@ -38,6 +38,20 @@ switch ($route){
             echo json_encode(["error"=> "Método no permitido"]);
         }
         break;
+
+    case 'api/ofertas/documentos':
+        header("Content-Type: application/json; charset=UTF-8");
+        $controller = new App\Controllers\OfertaDocumentoController();
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->index();
+        } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $controller->store();
+        } else {
+            http_response_code(405);
+            echo json_encode(["error" => "Método no permitido"]);
+        }
+        break;
     
     case 'api/actividades':
         header("Content-Type: application/json; charset=UTF-8");

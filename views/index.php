@@ -113,6 +113,7 @@
                                         <th>Presupuesto</th>
                                         <th>Cronograma Cierre</th>
                                         <th class="text-center">Estado</th>
+                                        <th class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -139,9 +140,81 @@
                                                 {{ oferta.estado }}
                                             </span>
                                         </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-primary fw-medium" @click="abrirModalAdjuntos(oferta)">
+                                                📎 Adjuntar
+                                            </button>
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--Modal Cargue-->
+        <div v-if="modal.show">
+            <div class="modal-backdrop fade show" style="background: rgba(0,0,0,0.6);" @click="modal.show = false"></div>
+            <div class="modal d-block" style="overflow-y: auto;" role="dialog" tabindex="-1">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content border-0 shadow">
+                        
+                        <div class="modal-header bg-dark text-white py-3">
+                            <h5 class="modal-title fw-semibold">📎 Documentos de la Oferta: {{ modal.ofertaSeleccionada.consecutivo }}</h5>
+                            <button type="button" class="btn-close btn-close-white" @click="modal.show = false"></button>
+                        </div>
+                        
+                        <div class="modal-body p-4">
+                            
+                            <!-- Formulario  -->
+                            <form @submit.prevent="subirDocumento" class="bg-light p-3 rounded mb-4 border" enctype="multipart/form-data">
+                                <h6 class="fw-bold mb-3 text-secondary">Subir un nuevo documento anexo</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label small fw-medium">Título del documento *</label>
+                                        <input type="text" class="form-control form-control-sm" v-model.trim="modal.formulario.titulo" required placeholder="Ej: Propuesta Técnica">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label small fw-medium">Archivo (PDF o ZIP) *</label>
+                                        <input type="file" class="form-control form-control-sm" id="archivoAdjunto" ref="archivoInput" accept=".pdf,.zip" required>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-medium">Descripción del anexo *</label>
+                                    <input type="text" class="form-control form-control-sm" v-model.trim="modal.formulario.descripcion" required placeholder="Ej: Costos detallados de ingeniería.">
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-success px-4 fw-semibold" :disabled="modal.cargando">
+                                    <span v-if="modal.cargando" class="spinner-border spinner-border-sm me-1"></span>
+                                    Subir Archivo
+                                </button>
+                            </form>
+
+                            <h6 class="fw-bold mb-3 text-dark">Documentos cargados actualmente</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered align-middle mb-0">
+                                    <thead class="table-light text-secondary small">
+                                        <tr>
+                                            <th>Título</th>
+                                            <th>Descripción</th>
+                                            <th class="text-center">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-if="modal.documentos.length === 0">
+                                            <td colspan="3" class="text-center text-muted py-4 small">No hay anexos subidos para esta oferta comercial.</td>
+                                        </tr>
+                                        <tr v-for="doc in modal.documentos" :key="doc.id" class="small">
+                                            <td class="fw-semibold text-primary">{{ doc.titulo }}</td>
+                                            <td class="text-muted">{{ doc.descripcion }}</td>
+                                            <td class="text-center">
+                                                <a :href="'http://localhost:8000/uploads/' + doc.archivo" target="_blank" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2 font-monospace">Descargar</a>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -176,6 +249,16 @@
                     show: false,
                     message: '',
                     type: 'success'
+                },
+                modal: {
+                    show: false,
+                    cargando: false,
+                    ofertaSeleccionada: {},
+                    documentos: [],
+                    formulario: {
+                        titulo: '',
+                        descripcion: ''
+                    }
                 }
             },
             mounted() {
@@ -246,7 +329,63 @@
                         fecha_cierre: '',
                         hora_cierre: ''
                     };
-                }
+                },
+
+                //modal de carga
+                abrirModalAdjuntos(oferta) {
+                    this.modal.ofertaSeleccionada = oferta;
+                    this.modal.formulario.titulo = '';
+                    this.modal.formulario.descripcion = '';
+                    this.modal.documentos = [];
+                    this.modal.show = true;
+                    this.cargarDocumentos(oferta.id);
+                },   
+
+                //consulta documentos
+                cargarDocumentos(ofertaId) {
+                    axios.get(`${API_BASE}/ofertas/documentos?licitacion_id=${ofertaId}`)
+                        .then(res => {
+                            this.modal.documentos = res.data;
+                        })
+                        .catch(err => {
+                            this.mostrarAlerta("Error al cargar los documentos anexos", "error");
+                        });
+                },
+
+                //envio de archivo al sv
+                subirDocumento() {
+                    const fileInput = this.$refs.archivoInput;
+                    if (!fileInput || fileInput.files.length === 0) {
+                        this.mostrarAlerta("Por favor seleccione un archivo PDF o ZIP", "error");
+                        return;
+                    }
+
+                    this.modal.cargando = true;
+
+                    let formData = new FormData();
+                    formData.append('licitacion_id', this.modal.ofertaSeleccionada.id);
+                    formData.append('titulo', this.modal.formulario.titulo);
+                    formData.append('descripcion', this.modal.formulario.descripcion);
+                    formData.append('archivo', fileInput.files[0]);
+
+                    axios.post(`${API_BASE}/ofertas/documentos`, formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    })
+                    .then(res => {
+                        this.mostrarAlerta(res.data.message, "success");
+                        this.modal.formulario.titulo = '';
+                        this.modal.formulario.descripcion = '';
+                        if (fileInput) fileInput.value = '';
+                        this.cargarDocumentos(this.modal.ofertaSeleccionada.id);
+                    })
+                    .catch(err => {
+                        const msg = err.response && err.response.data.error ? err.response.data.error : "Error al subir archivo";
+                        this.mostrarAlerta(msg, "error");
+                    })
+                    .finally(() => {
+                        this.modal.cargando = false;
+                    });
+                },
             }
         });
     </script>

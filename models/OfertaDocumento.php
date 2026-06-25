@@ -8,7 +8,7 @@ class OfertaDocumento extends Model
     protected $table = 'ofertas_documentos';
 
     protected $fillable = [
-        'licitaciones_id',
+        'licitacion_id',
         'titulo',
         'descripcion',
         'archivo'
