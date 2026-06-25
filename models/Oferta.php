@@ -21,6 +21,8 @@ class Oferta extends Model
         'estado'
     ];
 
+    protected $appends = ['estado_calculado'];
+
     const CREATED_AT = 'creado_en';
     const UPDATED_AT = 'actualizado_en';
 
@@ -34,5 +36,16 @@ class Oferta extends Model
     public function documentos()
     {
         return $this->hasMany(OfertaDocumento::class, 'licitacion_id');
+    }
+
+    public function getEstadoCalculadoAttribute()
+    {
+        $fechaCierre = strtotime(
+            $this->fecha_cierre . ' ' . $this->hora_cierre
+        );
+
+        return $fechaCierre < time()
+            ? 'Cerrada'
+            : 'Abierta';
     }
 }

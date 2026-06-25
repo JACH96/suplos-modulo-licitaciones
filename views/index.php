@@ -27,6 +27,9 @@
             <li class="nav-item">
                 <a :class="['nav-link', vistaActual === 'crear' ? 'active fw-bold' : '']" href="#" @click.prevent="vistaActual = 'crear'; resetFormulario();">➕ Nueva Oferta</a>
             </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" :class="{ active: vistaActual === 'detalle' }">👁️ Detalle Oferta</a>
+            </li>
         </ul>
 
         <div v-if="vistaActual === 'listado'" class="card shadow-sm border-0 mb-4">
@@ -63,7 +66,7 @@
                                 <th>Presupuesto</th>
                                 <th>Cronograma Cierre</th>
                                 <th class="text-center">Estado</th>
-                                <th class="text-center" colspan="2">Acciones</th>
+                                <th class="text-center" colspan="3">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -82,15 +85,18 @@
                                     <small class="text-muted">{{ oferta.hora_cierre }}</small>
                                 </td>
                                 <td class="text-center">
-                                    <span :class="['badge', 'rounded-pill', oferta.estado === 'Abierta' ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary']">
-                                        {{ oferta.estado }}
+                                    <span class="badge rounded-pill" :class="oferta.estado_calculado === 'Cerrada' ? 'bg-danger-subtle text-danger-emphasis' : 'bg-success-subtle text-success-emphasis'">
+                                        {{ oferta.estado_calculado }}
                                     </span>
                                 </td>
                                 <td class="text-center">
                                     <button class="btn btn-sm btn-outline-primary fw-medium" @click="abrirModalAdjuntos(oferta)">📎 Adjuntar</button>
                                 </td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-outline-primary fw-medium" @click="editarOferta(oferta)">✏️ Editar</button>
+                                    <button class="btn btn-sm btn-outline-warning fw-medium" @click="editarOferta(oferta)">✏️ Editar</button>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-info fw-medium" @click="verDetalle(oferta)">👁️ Ver</button>
                                 </td>
                             </tr>
                         </tbody>
@@ -194,65 +200,6 @@
                     </form>
                 </div>
             </div>
-
-            <!--Listado Ofertas -->
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-dark text-white py-3">
-                    <h5 class="card-title mb-0 fw-semibold">Ofertas Publicadas en el Sistema</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="ps-3">Consecutivo</th>
-                                    <th>Objeto</th>
-                                    <th>Presupuesto</th>
-                                    <th>Cronograma Cierre</th>
-                                    <th class="text-center">Estado</th>
-                                    <th class="text-center" colspan="2">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-if="listaOfertas.length === 0">
-                                    <td colspan="5" class="text-center text-muted py-5">
-                                        No hay ofertas registradas en el sistema actualmente.
-                                    </td>
-                                </tr>
-                                <tr v-for="oferta in listaOfertas" :key="oferta.id">
-                                    <td class="ps-3 font-monospace fw-bold text-secondary">{{ oferta.consecutivo }}</td>
-                                    <td>
-                                        <div class="fw-semibold text-dark">{{ oferta.objeto }}</div>
-                                        <small class="text-muted d-block text-truncate" style="max-width: 250px;">{{ oferta.descripcion }}</small>
-                                    </td>
-                                    <td class="fw-medium text-nowrap">
-                                        {{ oferta.moneda }} {{ Number(oferta.presupuesto).toLocaleString('es-CO') }}
-                                    </td>
-                                    <td>
-                                        <small class="d-block text-danger fw-medium">{{ oferta.fecha_cierre }}</small>
-                                        <small class="text-muted">{{ oferta.hora_cierre }}</small>
-                                    </td>
-                                    <td class="text-center">
-                                        <span :class="['badge', 'rounded-pill', oferta.estado === 'Abierta' ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary']" style="padding: 0.5em 1em;">
-                                            {{ oferta.estado }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-primary fw-medium" @click="abrirModalAdjuntos(oferta)">
-                                            📎 Adjuntar
-                                        </button>
-                                    </td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-primary fw-medium" @click="editarOferta(oferta)">
-                                            ✏️ Editar
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
         </div>
         <!--Modal Cargue-->
         <div v-if="modal.show">
@@ -321,6 +268,122 @@
                 </div>
             </div>
         </div>
+        <!--Detalle-->
+        <div v-if="vistaActual === 'detalle'">
+            <div class="card shadow-sm">
+
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        {{ detalleOferta.consecutivo }}
+                    </h4>
+
+                    <button
+                        class="btn btn-outline-secondary btn-sm"
+                        @click="vistaActual='listado'">
+
+                        ← Volver
+
+                    </button>
+                </div>
+
+                <div class="card-body">
+
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="fw-bold">Objeto</label>
+                            <div>{{ detalleOferta.objeto }}</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="fw-bold">Estado</label>
+
+                            <div>
+                                <span
+                                    class="badge"
+                                    :class="detalleOferta.estado_calculado === 'Cerrada'
+                                        ? 'bg-danger'
+                                        : 'bg-success'">
+
+                                    {{ detalleOferta.estado_calculado }}
+
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12 mb-3">
+                            <label class="fw-bold">Descripción</label>
+                            <div>{{ detalleOferta.descripcion }}</div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="fw-bold">Moneda</label>
+                            <div>{{ detalleOferta.moneda }}</div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="fw-bold">Presupuesto</label>
+                            <div>{{ detalleOferta.presupuesto }}</div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="fw-bold">Actividad</label>
+                            <div>{{ detalleOferta.actividad.producto }}</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="fw-bold">Fecha Inicio</label>
+                            <div>
+                                {{ detalleOferta.fecha_inicio }}
+                                {{ detalleOferta.hora_inicio }}
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="fw-bold">Fecha Cierre</label>
+                            <div>
+                                {{ detalleOferta.fecha_cierre }}
+                                {{ detalleOferta.hora_cierre }}
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+                <div class="mt-4 pt-3 border-top">
+                    <h6 class="fw-bold text-dark mb-3">Documentos cargados actualmente</h6>
+                    
+                    <div class="table-responsive border rounded bg-white">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr class="small">
+                                    <th>Título</th>
+                                    <th>Descripción</th>
+                                    <th class="text-center" style="width: 120px;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 1. Validación usando tu variable limpia de documentos -->
+                                <tr v-if="!detalleDocumentos || detalleDocumentos.length === 0">
+                                    <td colspan="3" class="text-center text-muted py-4 small">No hay anexos subidos para esta oferta comercial.</td>
+                                </tr>
+                                
+                                <!-- 2. Ciclo iterativo leyendo directamente desde detalleDocumentos -->
+                                <tr v-for="doc in detalleDocumentos" :key="doc.id" class="small">
+                                    <td class="fw-semibold text-primary">{{ doc.titulo }}</td>
+                                    <td class="text-muted">{{ doc.descripcion }}</td>
+                                    <td class="text-center">
+                                        <a :href="'http://localhost:8000/uploads/' + doc.archivo" target="_blank" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2 font-monospace">Descargar</a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
@@ -337,6 +400,8 @@
                 busquedaActividad: '',
                 listaActividades: [],
                 listaOfertas: [],
+                detalleOferta: null,
+                detalleDocumentos: [],
                 filtros: {
                     consecutivo: '',
                     objeto: '',
@@ -578,6 +643,31 @@
                     .finally(() => {
                         this.modal.cargando = false;
                     });
+                },
+
+                verDetalle(oferta) {
+
+                    this.detalleOferta = oferta;
+                    this.detalleDocumentos = [];
+
+                    axios.get(
+                        `${API_BASE}/ofertas/documentos?licitacion_id=${oferta.id}`
+                    )
+                    .then(res => {
+
+                        this.detalleDocumentos = res.data;
+                        this.vistaActual = 'detalle';
+
+                    })
+                    .catch(err => {
+
+                        this.mostrarAlerta(
+                            "Error al cargar documentos del detalle",
+                            "error"
+                        );
+
+                    });
+
                 },
             }
         });
