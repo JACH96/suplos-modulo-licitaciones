@@ -35,13 +35,11 @@
         <div v-if="vistaActual === 'listado'" class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-middle py-3">
                 <h5 class="card-title mb-0 fw-semibold align-self-center">Ofertas Publicadas en el Sistema</h5>
-                <!-- Requerimiento: Botón de Excel desde Backend -->
                 <button class="btn btn-sm btn-success fw-bold" @click="descargarExcel">
                     📊 Exportar Excel
                 </button>
             </div>
             <div class="card-body p-4">
-                <!-- Requerimiento: Campos de Filtros -->
                 <div class="row g-2 mb-4 bg-light p-3 rounded border">
                     <h6 class="fw-bold text-muted mb-2">Filtros de búsqueda</h6>
                     <div class="col-md-3">
@@ -58,7 +56,6 @@
                 <!-- Tabla Adaptada -->
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <!-- Mismo thead y tbody que ya tienes en tu código -->
                         <thead class="table-light">
                             <tr>
                                 <th>Consecutivo</th>
@@ -103,7 +100,6 @@
                     </table>
                 </div>
 
-                <!-- Requerimiento: Barra de Paginación -->
                 <div class="d-flex justify-content-center mt-3">
                     <button
                         class="btn btn-outline-secondary me-2"
@@ -363,12 +359,10 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- 1. Validación usando tu variable limpia de documentos -->
                                 <tr v-if="!detalleDocumentos || detalleDocumentos.length === 0">
                                     <td colspan="3" class="text-center text-muted py-4 small">No hay anexos subidos para esta oferta comercial.</td>
                                 </tr>
                                 
-                                <!-- 2. Ciclo iterativo leyendo directamente desde detalleDocumentos -->
                                 <tr v-for="doc in detalleDocumentos" :key="doc.id" class="small">
                                     <td class="fw-semibold text-primary">{{ doc.titulo }}</td>
                                     <td class="text-muted">{{ doc.descripcion }}</td>
