@@ -3,6 +3,8 @@ namespace App\Controllers;
 
 use App\Models\Actividad;
 use App\Models\Oferta;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class OfertaController
 {
@@ -173,6 +175,79 @@ class OfertaController
         echo json_encode([
             "message" => "Oferta actualizada correctamente"
         ]);
+    }
+
+    public function exportar()
+    {
+        try {
+
+            $consecutivo = isset($_GET['consecutivo']) ? trim($_GET['consecutivo']) : '';
+            $objeto      = isset($_GET['objeto']) ? trim($_GET['objeto']) : '';
+            $descripcion = isset($_GET['descripcion']) ? trim($_GET['descripcion']) : '';
+
+            $query = Oferta::query();
+
+            $query->when($consecutivo !== '', function ($q) use ($consecutivo) {
+                return $q->where('consecutivo', 'LIKE', "%{$consecutivo}%");
+            });
+
+            $query->when($objeto !== '', function ($q) use ($objeto) {
+                return $q->where('objeto', 'LIKE', "%{$objeto}%");
+            });
+
+            $query->when($descripcion !== '', function ($q) use ($descripcion) {
+                return $q->where('descripcion', 'LIKE', "%{$descripcion}%");
+            });
+
+            $query->orderBy('creado_en', 'DESC');
+
+            $ofertas = $query->get();
+
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+
+            // Encabezados
+            $sheet->setCellValue('A1', 'Consecutivo');
+            $sheet->setCellValue('B1', 'Objeto');
+            $sheet->setCellValue('C1', 'Descripción');
+            $sheet->setCellValue('D1', 'Moneda');
+            $sheet->setCellValue('E1', 'Presupuesto');
+            $sheet->setCellValue('F1', 'Estado');
+            $sheet->setCellValue('G1', 'Fecha Inicio');
+            $sheet->setCellValue('H1', 'Fecha Cierre');
+
+            $fila = 2;
+
+            foreach ($ofertas as $oferta) {
+
+                $sheet->setCellValue('A' . $fila, $oferta->consecutivo);
+                $sheet->setCellValue('B' . $fila, $oferta->objeto);
+                $sheet->setCellValue('C' . $fila, $oferta->descripcion);
+                $sheet->setCellValue('D' . $fila, $oferta->moneda);
+                $sheet->setCellValue('E' . $fila, $oferta->presupuesto);
+                $sheet->setCellValue('F' . $fila, $oferta->estado);
+                $sheet->setCellValue('G' . $fila, $oferta->fecha_inicio);
+                $sheet->setCellValue('H' . $fila, $oferta->fecha_cierre);
+
+                $fila++;
+            }
+
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment; filename="ConsolidadoOfertas.xlsx"');
+            header('Cache-Control: max-age=0');
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+            exit;
+
+        } catch (\Exception $e) {
+
+            http_response_code(500);
+
+            echo json_encode([
+                'error' => 'Error al generar el Excel: ' . $e->getMessage()
+            ]);
+        }
     }
 
 }

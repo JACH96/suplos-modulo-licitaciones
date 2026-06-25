@@ -77,6 +77,18 @@ switch ($route){
         }
         break;
 
+    case 'api/ofertas/exportar':
+        $controller = new App\Controllers\OfertaController();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $controller->exportar();
+        } else {
+            http_response_code(405);
+            echo json_encode(["error" => "Método no permitido"]);
+        }
+
+        break;
+
     default:
         header("Content-Type: application/json; charset=UTF-8");
         http_response_code(404);
