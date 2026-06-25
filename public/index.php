@@ -18,6 +18,19 @@ if (strpos($requestUri, $_SERVER['SCRIPT_NAME']) === 0) {
 }
 $route = trim($route, '/');
 
+if (preg_match('#^api/ofertas/(\d+)$#', $route, $matches)) {
+
+    $id = $matches[1];
+
+    $controller = new App\Controllers\OfertaController();
+
+    if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+        $controller->update($id);
+    }
+
+    exit;
+}
+
 switch ($route){
     case '':
     case '/':
@@ -46,7 +59,7 @@ switch ($route){
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $controller->index();
         } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $controller->store();
+                $controller->store();
         } else {
             http_response_code(405);
             echo json_encode(["error" => "Método no permitido"]);

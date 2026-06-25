@@ -20,135 +20,236 @@
             <button type="button" class="btn-close" @click="alert.show = false"></button>
         </div>
 
-        <div class="row">
-            <!--Formulario de Registro-->
-            <div class="col-lg-5 mb-4">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-primary text-white py-3">
-                        <h5 class="card-title mb-0 fw-semibold">Nueva Oferta Comercial</h5>
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item">
+                <a :class="['nav-link', vistaActual === 'listado' ? 'active fw-bold' : '']" href="#" @click.prevent="vistaActual = 'listado'; cargarOfertas();">📋 Listado de Ofertas</a>
+            </li>
+            <li class="nav-item">
+                <a :class="['nav-link', vistaActual === 'crear' ? 'active fw-bold' : '']" href="#" @click.prevent="vistaActual = 'crear'; resetFormulario();">➕ Nueva Oferta</a>
+            </li>
+        </ul>
+
+        <div v-if="vistaActual === 'listado'" class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-middle py-3">
+                <h5 class="card-title mb-0 fw-semibold align-self-center">Ofertas Publicadas en el Sistema</h5>
+                <!-- Requerimiento: Botón de Excel desde Backend -->
+                <button class="btn btn-sm btn-success fw-bold" @click="descargarExcel">
+                    📊 Exportar Excel
+                </button>
+            </div>
+            <div class="card-body p-4">
+                <!-- Requerimiento: Campos de Filtros -->
+                <div class="row g-2 mb-4 bg-light p-3 rounded border">
+                    <h6 class="fw-bold text-muted mb-2">Filtros de búsqueda</h6>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filtrar por consecutivo..." v-model="filtros.consecutivo" @input="paginacion.paginaActual = 1; cargarOfertas();">
                     </div>
-                    <div class="card-body p-4">
-                        <form @submit.prevent="guardarOferta">
-                            
-                            <!-- Campos diligenciables -->
-                            <div class="mb-3">
-                                <label class="form-label fw-medium">Objeto de la oferta *</label>
-                                <input type="text" class="form-control" v-model="formulario.objeto" maxlength="150" required placeholder="Ej: Adquisición de servidores">
-                            </div>
+                    <div class="col-md-4">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filtrar por objeto..." v-model="filtros.objeto" @input="paginacion.paginaActual = 1; cargarOfertas();">
+                    </div>
+                    <div class="col-md-5">
+                        <input type="text" class="form-control form-control-sm" placeholder="Filtrar por descripción..." v-model="filtros.descripcion" @input="paginacion.paginaActual = 1; cargarOfertas();">
+                    </div>
+                </div>
 
-                            <div class="mb-3">
-                                <label class="form-label fw-medium">Descripción completa *</label>
-                                <textarea class="form-control" v-model="formulario.descripcion" rows="3" maxlength="400" required placeholder="Detalles técnicos de la oferta..."></textarea>
-                            </div>
+                <!-- Tabla Adaptada -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <!-- Mismo thead y tbody que ya tienes en tu código -->
+                        <thead class="table-light">
+                            <tr>
+                                <th>Consecutivo</th>
+                                <th>Objeto</th>
+                                <th>Presupuesto</th>
+                                <th>Cronograma Cierre</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-center" colspan="2">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="listaOfertas.length === 0">
+                                <td colspan="6" class="text-center text-muted py-5">No se encontraron ofertas con los filtros aplicados.</td>
+                            </tr>
+                            <tr v-for="oferta in listaOfertas" :key="oferta.id">
+                                <td class="font-monospace fw-bold text-secondary">{{ oferta.consecutivo }}</td>
+                                <td>
+                                    <div class="fw-semibold text-dark">{{ oferta.objeto }}</div>
+                                    <small class="text-muted d-block text-truncate" style="max-width: 400px;">{{ oferta.descripcion }}</small>
+                                </td>
+                                <td class="fw-medium text-nowrap">{{ oferta.moneda }} {{ Number(oferta.presupuesto).toLocaleString('es-CO') }}</td>
+                                <td>
+                                    <small class="d-block text-danger fw-medium">{{ oferta.fecha_cierre }}</small>
+                                    <small class="text-muted">{{ oferta.hora_cierre }}</small>
+                                </td>
+                                <td class="text-center">
+                                    <span :class="['badge', 'rounded-pill', oferta.estado === 'Abierta' ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary']">
+                                        {{ oferta.estado }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-primary fw-medium" @click="abrirModalAdjuntos(oferta)">📎 Adjuntar</button>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-primary fw-medium" @click="editarOferta(oferta)">✏️ Editar</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                            <div class="row">
-                                <div class="col-md-5 mb-3">
-                                    <label class="form-label fw-medium">Moneda *</label>
-                                    <select class="form-select" v-model="formulario.moneda" required>
-                                        <option value="COP">COP ($)</option>
-                                        <option value="USD">USD ($)</option>
-                                        <option value="EUR">EUR (€)</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-7 mb-3">
-                                    <label class="form-label fw-medium">Presupuesto *</label>
-                                    <input type="number" class="form-control" v-model.number="formulario.presupuesto" step="0.01" min="0.01" required placeholder="0.00">
-                                </div>
-                            </div>
+                <!-- Requerimiento: Barra de Paginación -->
+                <div class="d-flex justify-content-center mt-3">
+                    <button
+                        class="btn btn-outline-secondary me-2"
+                        @click="cambiarPagina(paginacion.paginaActual - 1)"
+                        :disabled="paginacion.paginaActual <= 1">
+                        Anterior
+                    </button>
+                    <span class="align-self-center">
+                        Página {{ paginacion.paginaActual }} de {{ paginacion.totalPaginas }}
+                    </span>
+                    <button
+                        class="btn btn-outline-secondary ms-2"
+                        @click="cambiarPagina(paginacion.paginaActual + 1)"
+                        :disabled="paginacion.paginaActual >= paginacion.totalPaginas">
+                        Siguiente
+                    </button>
+                </div>
+            </div>
+        </div>
 
-                            <div class="mb-3">
-                                <label class="form-label fw-medium">Actividad ONU asociada *</label>
-                                <select class="form-select" v-model="formulario.actividad_id" required>
-                                    <option value="" disabled selected>Seleccione una actividad de la lista...</option>
-                                    <option v-for="act in listaActividades" :key="act.id" :value="act.id">
-                                        {{ act.codigo_producto }} - {{ act.producto }} ({{ act.clase }})
-                                    </option>
+        <div v-if="vistaActual === 'crear'" class="card shadow-sm border-0 col-lg-12 mx-auto">
+            <!--Formulario de Registro-->
+            
+            <div class="mb-4">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="card-title mb-0 fw-semibold">Nueva Oferta Comercial</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form @submit.prevent="guardarOferta">
+                        
+                        <!-- Campos diligenciables -->
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Objeto de la oferta *</label>
+                            <input type="text" class="form-control" v-model="formulario.objeto" maxlength="150" required placeholder="Ej: Adquisición de servidores">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Descripción completa *</label>
+                            <textarea class="form-control" v-model="formulario.descripcion" rows="3" maxlength="400" required placeholder="Detalles técnicos de la oferta..."></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-5 mb-3">
+                                <label class="form-label fw-medium">Moneda *</label>
+                                <select class="form-select" v-model="formulario.moneda" required>
+                                    <option value="COP">COP ($)</option>
+                                    <option value="USD">USD ($)</option>
+                                    <option value="EUR">EUR (€)</option>
                                 </select>
                             </div>
-
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-medium">Fecha Inicio *</label>
-                                    <input type="date" class="form-control" v-model="formulario.fecha_inicio" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-medium">Hora Inicio *</label>
-                                    <input type="time" class="form-control" v-model="formulario.hora_inicio" required>
-                                </div>
+                            <div class="col-md-7 mb-3">
+                                <label class="form-label fw-medium">Presupuesto *</label>
+                                <input type="number" class="form-control" v-model.number="formulario.presupuesto" step="0.01" min="0.01" required placeholder="0.00">
                             </div>
+                        </div>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-medium">Fecha Cierre *</label>
-                                    <input type="date" class="form-control" v-model="formulario.fecha_cierre" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-medium">Hora Cierre *</label>
-                                    <input type="time" class="form-control" v-model="formulario.hora_cierre" required>
-                                </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Actividad ONU asociada *</label>
+                            <input type="text" class="form-control mb-2" placeholder="Escribe para buscar (Ej: Portátiles, Software)..." v-model="busquedaActividad">
+                            <select class="form-select" v-model="formulario.actividad_id" required>
+                                <option value="" disabled selected>Seleccione una actividad de la lista...</option>
+                                <option v-for="act in actividadesFiltradas" :key="act.id" :value="act.id">
+                                    {{ act.codigo_producto }} - {{ act.producto }} ({{ act.clase }})
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-medium">Fecha Inicio *</label>
+                                <input type="date" class="form-control" v-model="formulario.fecha_inicio" required>
                             </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-medium">Hora Inicio *</label>
+                                <input type="time" class="form-control" v-model="formulario.hora_inicio" required>
+                            </div>
+                        </div>
 
-                            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm mt-2" :disabled="cargando">
-                                <span v-if="cargando" class="spinner-border spinner-border-sm me-1" role="status"></span>
-                                Publicar Oferta
-                            </button>
-                        </form>
-                    </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-medium">Fecha Cierre *</label>
+                                <input type="date" class="form-control" v-model="formulario.fecha_cierre" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-medium">Hora Cierre *</label>
+                                <input type="time" class="form-control" v-model="formulario.hora_cierre" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm mt-2" :disabled="cargando">
+                            <span v-if="cargando" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            Publicar Oferta
+                        </button>
+                    </form>
                 </div>
             </div>
 
             <!--Listado Ofertas -->
-            <div class="col-lg-7 mb-4">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-dark text-white py-3">
-                        <h5 class="card-title mb-0 fw-semibold">Ofertas Publicadas en el Sistema</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="ps-3">Consecutivo</th>
-                                        <th>Objeto</th>
-                                        <th>Presupuesto</th>
-                                        <th>Cronograma Cierre</th>
-                                        <th class="text-center">Estado</th>
-                                        <th class="text-center">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-if="listaOfertas.length === 0">
-                                        <td colspan="5" class="text-center text-muted py-5">
-                                            No hay ofertas registradas en el sistema actualmente.
-                                        </td>
-                                    </tr>
-                                    <tr v-for="oferta in listaOfertas" :key="oferta.id">
-                                        <td class="ps-3 font-monospace fw-bold text-secondary">{{ oferta.consecutivo }}</td>
-                                        <td>
-                                            <div class="fw-semibold text-dark">{{ oferta.objeto }}</div>
-                                            <small class="text-muted d-block text-truncate" style="max-width: 250px;">{{ oferta.descripcion }}</small>
-                                        </td>
-                                        <td class="fw-medium text-nowrap">
-                                            {{ oferta.moneda }} {{ Number(oferta.presupuesto).toLocaleString('es-CO') }}
-                                        </td>
-                                        <td>
-                                            <small class="d-block text-danger fw-medium">{{ oferta.fecha_cierre }}</small>
-                                            <small class="text-muted">{{ oferta.hora_cierre }}</small>
-                                        </td>
-                                        <td class="text-center">
-                                            <span :class="['badge', 'rounded-pill', oferta.estado === 'Abierta' ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary']" style="padding: 0.5em 1em;">
-                                                {{ oferta.estado }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <button class="btn btn-sm btn-outline-primary fw-medium" @click="abrirModalAdjuntos(oferta)">
-                                                📎 Adjuntar
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="card-title mb-0 fw-semibold">Ofertas Publicadas en el Sistema</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Consecutivo</th>
+                                    <th>Objeto</th>
+                                    <th>Presupuesto</th>
+                                    <th>Cronograma Cierre</th>
+                                    <th class="text-center">Estado</th>
+                                    <th class="text-center" colspan="2">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="listaOfertas.length === 0">
+                                    <td colspan="5" class="text-center text-muted py-5">
+                                        No hay ofertas registradas en el sistema actualmente.
+                                    </td>
+                                </tr>
+                                <tr v-for="oferta in listaOfertas" :key="oferta.id">
+                                    <td class="ps-3 font-monospace fw-bold text-secondary">{{ oferta.consecutivo }}</td>
+                                    <td>
+                                        <div class="fw-semibold text-dark">{{ oferta.objeto }}</div>
+                                        <small class="text-muted d-block text-truncate" style="max-width: 250px;">{{ oferta.descripcion }}</small>
+                                    </td>
+                                    <td class="fw-medium text-nowrap">
+                                        {{ oferta.moneda }} {{ Number(oferta.presupuesto).toLocaleString('es-CO') }}
+                                    </td>
+                                    <td>
+                                        <small class="d-block text-danger fw-medium">{{ oferta.fecha_cierre }}</small>
+                                        <small class="text-muted">{{ oferta.hora_cierre }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <span :class="['badge', 'rounded-pill', oferta.estado === 'Abierta' ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary']" style="padding: 0.5em 1em;">
+                                            {{ oferta.estado }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-primary fw-medium" @click="abrirModalAdjuntos(oferta)">
+                                            📎 Adjuntar
+                                        </button>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-primary fw-medium" @click="editarOferta(oferta)">
+                                            ✏️ Editar
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -231,10 +332,23 @@
         new Vue({
             el: '#app',
             data: {
+                vistaActual: 'listado',
                 cargando: false,
+                busquedaActividad: '',
                 listaActividades: [],
                 listaOfertas: [],
+                filtros: {
+                    consecutivo: '',
+                    objeto: '',
+                    descripcion: ''
+                },
+                paginacion: {
+                    paginaActual: 1,
+                    totalPaginas: 1,
+                    porPagina: 10
+                },
                 formulario: {
+                    id: '',
                     objeto: '',
                     descripcion: '',
                     moneda: 'COP',
@@ -265,7 +379,29 @@
                 this.cargarActividades();
                 this.cargarOfertas();
             },
+            computed: {
+                actividadesFiltradas() {
+                    if (!this.listaActividades || !Array.isArray(this.listaActividades)) {
+                        return [];
+                    }
+
+                    if (!this.busquedaActividad || this.busquedaActividad.trim() === '') {
+                        return this.listaActividades.slice(0, 50);
+                    }
+
+                    const termino = this.busquedaActividad.toLowerCase().trim();
+
+                    const filtradas = this.listaActividades.filter(act => {
+                        return (act.producto && act.producto.toLowerCase().includes(termino)) || 
+                            (act.codigo_producto && act.codigo_producto.toString().includes(termino)) ||
+                            (act.clase && act.clase.toLowerCase().includes(termino));
+                    });
+
+                    return filtradas.slice(0, 50);
+                }
+            },
             methods: {
+                
                 //llenar el selector desplegable
                 cargarActividades() {
                     axios.get(`${API_BASE}/actividades`)
@@ -279,32 +415,89 @@
 
                 //ofertas guardadas para mostrarlas
                 cargarOfertas() {
-                    axios.get(`${API_BASE}/ofertas`)
-                        .then(res => { 
-                            this.listaOfertas = res.data; 
-                        })
-                        .catch(err => { 
-                            this.mostrarAlerta("Error al consultar el listado de ofertas", "error"); 
-                        });
+                    const params = {
+                        page: this.paginacion.paginaActual,
+                        consecutivo: this.filtros.consecutivo,
+                        objeto: this.filtros.objeto,
+                        descripcion: this.filtros.descripcion
+                    };
+                    
+                    axios.get(`${API_BASE}/ofertas`, { params })
+                    .then(res => {
+                        this.listaOfertas = res.data.data || [];
+                        this.paginacion.totalPaginas = res.data.last_page || 1;
+                    })
+                    
                 },
 
-                //guardar oferta
+                cambiarPagina(pagina) {
+                    if (pagina < 1 || pagina > this.paginacion.totalPaginas) return;
+                    this.paginacion.paginaActual = pagina;
+                    this.cargarOfertas();
+                },
+
+                descargarExcel() {
+                    const queryParams = new URLSearchParams(this.filtros).toString();
+                    window.open(`${API_BASE}/ofertas/exportar?${queryParams}`, '_blank');
+                },
+
                 guardarOferta() {
+                const inicio = new Date(`${this.formulario.fecha_inicio}T${this.formulario.hora_inicio}`);
+                const cierre = new Date(`${this.formulario.fecha_cierre}T${this.formulario.hora_cierre}`);
+
+                if (inicio >= cierre) {
+                    this.mostrarAlerta("La fecha y hora de cierre deben ser posteriores a la fecha y hora de inicio.", "error");
+                    return;
+                }
                     this.cargando = true;
 
-                    axios.post(`${API_BASE}/ofertas`, this.formulario)
+                    const esEdicion = this.formulario.id && this.formulario.id !== '';
+
+                    const request = esEdicion
+                        ? axios.put(
+                            `${API_BASE}/ofertas/${this.formulario.id}`,
+                            this.formulario
+                        )
+                        : axios.post(
+                            `${API_BASE}/ofertas`,
+                            this.formulario
+                        );
+
+                    request
                         .then(res => {
                             this.mostrarAlerta(res.data.message, "success");
                             this.resetFormulario();
                             this.cargarOfertas();
+                            this.vistaActual = 'listado';
                         })
                         .catch(err => {
-                            const msg = err.response && err.response.data.error ? err.response.data.error : "Error de comunicación";
+                            const msg =
+                                err.response && err.response.data.error
+                                    ? err.response.data.error
+                                    : "Error de comunicación";
+
                             this.mostrarAlerta(msg, "error");
                         })
-                        .finally(() => { 
-                            this.cargando = false; 
+                        .finally(() => {
+                            this.cargando = false;
                         });
+                },
+
+                editarOferta(oferta) {
+                    this.formulario = {
+                        id: oferta.id,
+                        objeto: oferta.objeto,
+                        descripcion: oferta.descripcion,
+                        moneda: oferta.moneda,
+                        presupuesto: oferta.presupuesto,
+                        actividad_id: oferta.actividad_id,
+                        fecha_inicio: oferta.fecha_inicio,
+                        hora_inicio: oferta.hora_inicio,
+                        fecha_cierre: oferta.fecha_cierre,
+                        hora_cierre: oferta.hora_cierre
+                    };
+
+                    this.vistaActual = 'crear';
                 },
 
                 //mensajes flotantes en la pantalla
