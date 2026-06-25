@@ -15,7 +15,7 @@ $capsule->addConnection([
     'port' => $_ENV['DB_PORT'] ?? '3307',
     'database' => $_ENV['DB_DATABASE'] ?? 'suplos_licitaciones',
     'username' => $_ENV['DB_USERNAME'] ?? 'root',
-    'password' => $_ENV['DB_PASSWORD'] == '',
+    'password' => $_ENV['DB_PASSWORD'] ?? '',
     'charset' => 'utf8mb4',
     'collation' => 'utf8mb4_unicode_ci',
     'prefix' => '',
@@ -24,5 +24,4 @@ $capsule->addConnection([
 $capsule->setAsGlobal();
 
 $capsule->bootEloquent();
-
 ?>
