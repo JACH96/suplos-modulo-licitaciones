@@ -19,7 +19,15 @@ if (strpos($requestUri, $_SERVER['SCRIPT_NAME']) === 0) {
 $route = trim($route, '/');
 
 switch ($route){
+    case '':
+    case '/':
+        header_remove("Content-Type");
+        header("Content-Type: text/html; charset=UTF-8");
+        require_once __DIR__ . '/../views/index.php';
+        break;
+
     case 'api/ofertas':
+        header("Content-Type: application/json; charset=UTF-8");
         $controller = new App\Controllers\OfertaController();
         if($_SERVER['REQUEST_METHOD'] === 'GET') {
             $controller->index();
@@ -32,6 +40,7 @@ switch ($route){
         break;
     
     case 'api/actividades':
+        header("Content-Type: application/json; charset=UTF-8");
         $controller = new App\Controllers\ActividadController();
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $controller->index();
@@ -42,6 +51,7 @@ switch ($route){
         break;
 
     default:
+        header("Content-Type: application/json; charset=UTF-8");
         http_response_code(404);
         echo json_encode(["error" => "Ruta no encontrada en la API"]);
         break;

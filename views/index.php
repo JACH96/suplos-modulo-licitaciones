@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo de Ofertas - Suplos</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+
+    <div id="app" class="container my-5">
+        <header class="mb-4 text-center text-md-start">
+            <h1 class="h3 text-primaryfw-bold">📦 Gestión de Ofertas Comerciales</h1>
+            <p class="text-muted">Prueba Técnica Desarrollador FullStack PHP Junior — Suplos</p>
+        </header>
+
+        <!-- Alertas globales -->
+        <div v-if="alert.show" :class="['alert', 'alert-dismissible', 'fade', 'show', alert.type === 'success' ? 'alert-success' : 'alert-danger']" role="alert">
+            {{ alert.message }}
+            <button type="button" class="btn-close" @click="alert.show = false"></button>
+        </div>
+
+        <div class="row">
+            <!--Formulario de Registro-->
+            <div class="col-lg-5 mb-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-primary text-white py-3">
+                        <h5 class="card-title mb-0 fw-semibold">Nueva Oferta Comercial</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <form @submit.prevent="guardarOferta">
+                            
+                            <!-- Campos diligenciables -->
+                            <div class="mb-3">
+                                <label class="form-label fw-medium">Objeto de la oferta *</label>
+                                <input type="text" class="form-control" v-model="formulario.objeto" maxlength="150" required placeholder="Ej: Adquisición de servidores">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-medium">Descripción completa *</label>
+                                <textarea class="form-control" v-model="formulario.descripcion" rows="3" maxlength="400" required placeholder="Detalles técnicos de la oferta..."></textarea>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-5 mb-3">
+                                    <label class="form-label fw-medium">Moneda *</label>
+                                    <select class="form-select" v-model="formulario.moneda" required>
+                                        <option value="COP">COP ($)</option>
+                                        <option value="USD">USD ($)</option>
+                                        <option value="EUR">EUR (€)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-7 mb-3">
+                                    <label class="form-label fw-medium">Presupuesto *</label>
+                                    <input type="number" class="form-control" v-model.number="formulario.presupuesto" step="0.01" min="0.01" required placeholder="0.00">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-medium">Actividad ONU asociada *</label>
+                                <select class="form-select" v-model="formulario.actividad_id" required>
+                                    <option value="" disabled selected>Seleccione una actividad de la lista...</option>
+                                    <option v-for="act in listaActividades" :key="act.id" :value="act.id">
+                                        {{ act.codigo_producto }} - {{ act.producto }} ({{ act.clase }})
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-medium">Fecha Inicio *</label>
+                                    <input type="date" class="form-control" v-model="formulario.fecha_inicio" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-medium">Hora Inicio *</label>
+                                    <input type="time" class="form-control" v-model="formulario.hora_inicio" required>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-medium">Fecha Cierre *</label>
+                                    <input type="date" class="form-control" v-model="formulario.fecha_cierre" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-medium">Hora Cierre *</label>
+                                    <input type="time" class="form-control" v-model="formulario.hora_cierre" required>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm mt-2" :disabled="cargando">
+                                <span v-if="cargando" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                Publicar Oferta
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!--Listado Ofertas -->
+            <div class="col-lg-7 mb-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-dark text-white py-3">
+                        <h5 class="card-title mb-0 fw-semibold">Ofertas Publicadas en el Sistema</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">Consecutivo</th>
+                                        <th>Objeto</th>
+                                        <th>Presupuesto</th>
+                                        <th>Cronograma Cierre</th>
+                                        <th class="text-center">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-if="listaOfertas.length === 0">
+                                        <td colspan="5" class="text-center text-muted py-5">
+                                            No hay ofertas registradas en el sistema actualmente.
+                                        </td>
+                                    </tr>
+                                    <tr v-for="oferta in listaOfertas" :key="oferta.id">
+                                        <td class="ps-3 font-monospace fw-bold text-secondary">{{ oferta.consecutivo }}</td>
+                                        <td>
+                                            <div class="fw-semibold text-dark">{{ oferta.objeto }}</div>
+                                            <small class="text-muted d-block text-truncate" style="max-width: 250px;">{{ oferta.descripcion }}</small>
+                                        </td>
+                                        <td class="fw-medium text-nowrap">
+                                            {{ oferta.moneda }} {{ Number(oferta.presupuesto).toLocaleString('es-CO') }}
+                                        </td>
+                                        <td>
+                                            <small class="d-block text-danger fw-medium">{{ oferta.fecha_cierre }}</small>
+                                            <small class="text-muted">{{ oferta.hora_cierre }}</small>
+                                        </td>
+                                        <td class="text-center">
+                                            <span :class="['badge', 'rounded-pill', oferta.estado === 'Abierta' ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary']" style="padding: 0.5em 1em;">
+                                                {{ oferta.estado }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.18.1/dist/axios.min.js"></script>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/index.php/api';
+
+        new Vue({
+            el: '#app',
+            data: {
+                cargando: false,
+                listaActividades: [],
+                listaOfertas: [],
+                formulario: {
+                    objeto: '',
+                    descripcion: '',
+                    moneda: 'COP',
+                    presupuesto: '',
+                    actividad_id: '',
+                    fecha_inicio: '',
+                    hora_inicio: '',
+                    fecha_cierre: '',
+                    hora_cierre: ''
+                },
+                alert: {
+                    show: false,
+                    message: '',
+                    type: 'success'
+                }
+            },
+            mounted() {
+                this.cargarActividades();
+                this.cargarOfertas();
+            },
+            methods: {
+                //llenar el selector desplegable
+                cargarActividades() {
+                    axios.get(`${API_BASE}/actividades`)
+                        .then(res => { 
+                            this.listaActividades = res.data; 
+                        })
+                        .catch(err => { 
+                            this.mostrarAlerta("Error al cargar actividades maestras", "error"); 
+                        });
+                },
+
+                //ofertas guardadas para mostrarlas
+                cargarOfertas() {
+                    axios.get(`${API_BASE}/ofertas`)
+                        .then(res => { 
+                            this.listaOfertas = res.data; 
+                        })
+                        .catch(err => { 
+                            this.mostrarAlerta("Error al consultar el listado de ofertas", "error"); 
+                        });
+                },
+
+                //guardar oferta
+                guardarOferta() {
+                    this.cargando = true;
+
+                    axios.post(`${API_BASE}/ofertas`, this.formulario)
+                        .then(res => {
+                            this.mostrarAlerta(res.data.message, "success");
+                            this.resetFormulario();
+                            this.cargarOfertas();
+                        })
+                        .catch(err => {
+                            const msg = err.response && err.response.data.error ? err.response.data.error : "Error de comunicación";
+                            this.mostrarAlerta(msg, "error");
+                        })
+                        .finally(() => { 
+                            this.cargando = false; 
+                        });
+                },
+
+                //mensajes flotantes en la pantalla
+                mostrarAlerta(message, type) {
+                    this.alert.message = message;
+                    this.alert.type = type;
+                    this.alert.show = true;
+                    
+                    setTimeout(() => { this.alert.show = false; }, 5000);
+                },
+
+                //devuelve los campos a vacío
+                resetFormulario() {
+                    this.formulario = {
+                        objeto: '',
+                        descripcion: '',
+                        moneda: 'COP',
+                        presupuesto: '',
+                        actividad_id: '',
+                        fecha_inicio: '',
+                        hora_inicio: '',
+                        fecha_cierre: '',
+                        hora_cierre: ''
+                    };
+                }
+            }
+        });
+    </script>
